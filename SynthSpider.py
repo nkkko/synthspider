@@ -29,6 +29,8 @@ azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
 # OpenAI API Key
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
+model_name = os.getenv("MODEL_NAME")
+
 # Configure OpenAI Client
 openai_client = OpenAI(api_key=openai_api_key)
 
@@ -221,7 +223,7 @@ def write_article(prompt):
     """
     try:
         response = azure_openai_client.chat.completions.create(
-            model='gpt-35-turbo-16k',
+            model=model_name,
             messages=[
                 {"role": "system", "content": "Follow user instructions. Write using Markdown."},
                 {"role": "user", "content": prompt}
