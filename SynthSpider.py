@@ -1,22 +1,18 @@
 # pip install openai chromadb python-dotenv bs4 argparse lxml tiktoken
 import logging
-import argparse
 import asyncio
 from bs4 import BeautifulSoup
 import chromadb
 from chromadb.db.base import UniqueConstraintError  # Import the exception
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
-import json
-import openai
-from openai import OpenAI, RateLimitError
+from openai import AzureOpenAI, OpenAI, RateLimitError
 import backoff
 import os
 import requests
 import tiktoken
 import time
 import xml.etree.ElementTree as ET
-from tqdm import tqdm
 
 # Get the root logger
 logger = logging.getLogger()
@@ -32,7 +28,17 @@ azure_endpoint = os.getenv("AZURE_ENDPOINT")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Configure OpenAI Client
-openai_client = OpenAI(api_key=azure_api_key)
+openai_client = OpenAI(api_key=openai_api_key)
+
+# Configure Azure OpenAI Client
+azure_openai_client = AzureOpenAI(
+    # https://learn.microsoft.com/en-us/azure/ai-services/openai/reference#rest-api-versioning
+    api_version=azure_api_version,
+    # https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/create-resource?pivots=web-portal#create-a-resource
+    azure_endpoint=azure_endpoint,
+    api_key = azure_api_key,
+)
+
 # Load the encoding once at the start of your script
 encoding = tiktoken.encoding_for_model("text-embedding-ada-002")
 
@@ -79,7 +85,6 @@ def parse_sitemap(sitemap_content, max_urls=None):
     Returns:
     List[str]: A list of extracted URLs, limited to 'max_urls' if specified.
     """
-    import xml.etree.ElementTree as ET
 
     # Parse the XML content
     tree = ET.ElementTree(ET.fromstring(sitemap_content))
@@ -213,7 +218,7 @@ def write_article(prompt):
     Generate an article using the OpenAI API.
     """
     try:
-        response = openai_client.chat.completions.create(
+        response = azure_openai_client.chat.completions.create(
             model='gpt-4-1106-preview',
             messages=[
                 {"role": "system", "content": "Follow user instructions. Write using Markdown."},
