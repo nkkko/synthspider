@@ -4,15 +4,15 @@ import asyncio
 import logging
 from tqdm import tqdm
 
-async def main(sitemap_url, n, embedding_function_name):
+async def main(sitemap_url, n, ef):
     global collection
     """
     Main function to fetch, parse the sitemap, and save HTML content to ChromaDB.
     """
     # Select the embedding function based on the user input
-    if embedding_function_name == "openai":
+    if ef == "openai":
         embedding_function = openai_ef
-    elif embedding_function_name == "azure":
+    elif ef == "azure":
         embedding_function = azure_ef
     else:
         embedding_function = default_ef

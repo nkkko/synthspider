@@ -70,17 +70,17 @@ The `--ef` argument allows you to specify which [embeddings function](https://do
 
 - Fetch and store 10 first articles from the sitemap:
   ```bash
-    python populate.py https://www.daytona.io/sitemap-definitions.xml --ef azure_ef --n 10
+    python populate.py https://www.daytona.io/sitemap-definitions.xml --ef azure --n 10
   ```
 
 - Search for the first two terms that are closest to the query in the stored content:
   ```bash
-    python search.py "SDE" --n 2
+    python search.py --ef azure --n 1 "sde"
   ```
 
 - Generate an article within set context of the first result from the vector DB: 
   ```bash
-    python write.py "Tell me a joke about" --s "guardrails" --n 1
+    python write.py "Tell me a joke about" --s "guardrails" --ef azure --n 1
   ```
   ```bash
     Why was the developer afraid to play cards with the guardrails?

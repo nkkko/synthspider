@@ -22,9 +22,11 @@ logger.setLevel(logging.INFO)  # Set the logging level to INFO
 load_dotenv()
 
 # Read the API key from the environment variable
-azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
 azure_api_version = os.getenv("AZURE_API_VERSION")
 azure_endpoint = os.getenv("AZURE_ENDPOINT")
+azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+
+# OpenAI API Key
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Configure OpenAI Client
@@ -219,7 +221,7 @@ def write_article(prompt):
     """
     try:
         response = azure_openai_client.chat.completions.create(
-            model='gpt-4-1106-preview',
+            model='gpt-35-turbo-16k',
             messages=[
                 {"role": "system", "content": "Follow user instructions. Write using Markdown."},
                 {"role": "user", "content": prompt}

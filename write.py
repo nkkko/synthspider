@@ -1,4 +1,4 @@
-from SynthSpider import search_in_chromadb, write_article, default_ef, openai_ef, chroma_client, collection_name
+from SynthSpider import search_in_chromadb, write_article, default_ef, openai_ef, azure_ef, chroma_client, collection_name
 import argparse
 
 if __name__ == "__main__":
@@ -6,13 +6,15 @@ if __name__ == "__main__":
     parser.add_argument('prompt', type=str, help='Article prompt.')
     parser.add_argument('--s', type=str, required=True, help='Search term for ChromaDB.')
     parser.add_argument('--n', type=int, default=5, help='Number of ChromaDB search results.')
-    parser.add_argument('--ef', type=str, default='default', choices=['default', 'openai'], help='Embedding function to use (default or openai).')
+    parser.add_argument('--ef', type=str, default='default', choices=['default', 'openai', 'azure'], help='Embedding function to use (default or openai).')
     
     args = parser.parse_args()
 
     # Select the embedding function based on the user input
     if args.ef == "openai":
         embedding_function = openai_ef
+    elif args.ef == "azure":
+        embedding_function = azure_ef
     else:
         embedding_function = default_ef
 
