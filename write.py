@@ -39,8 +39,9 @@ from SynthSpider import (
     openai_ef,
     azure_ef,
     chroma_client,
-    collection_name,
 )
+
+collection_name = "sitemap_collection"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

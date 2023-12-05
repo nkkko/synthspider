@@ -1,27 +1,35 @@
 """
-This script is designed to interact with a ChromaDB database, extracting and processing data for analysis and storage.
-It utilizes the `chromadb` package to access a persistent database client, retrieves a specific collection of data,
-and processes the results for output.
+This script is designed for extracting and saving data from a database using the chromadb library. It retrieves
+documents, embeddings, and metadata from a specified collection within a PersistentClient database, and then
+writes this data to two separate files: 'embeddings.tsv' and 'metadata.tsv'.
 
-The script performs the following key operations:
-1. Connects to the ChromaDB database and accesses a collection named "sitemap_collection".
-2. Retrieves data from the collection, including documents, embeddings, and metadata.
-3. Processes the retrieved data to format and combine metadata with documents.
-4. Outputs the embeddings data to a TSV (Tab-Separated Values) file named 'embeddings.tsv'.
-5. Similarly, outputs the combined metadata to another TSV file named 'metadata.tsv'.
+Key Steps:
+1. Initializes a PersistentClient from chromadb, pointing to a database located at 'db/'.
+2. Retrieves or creates a collection named 'sitemap_collection'.
+3. Fetches documents, embeddings, and metadata from the collection.
+4. Processes and combines the fetched data into a structured format.
+5. Writes the embeddings data to 'embeddings.tsv'.
+6. Writes the combined metadata to 'metadata.tsv'.
 
-Modules Used:
-- os: Provides a way of using operating system dependent functionality.
-- json: Provides JSON encoder and decoder.
-- ipdb: Provides an interactive Python debugger.
-- replicate: Not explicitly used in the script, but likely for replicating data or processes.
-- tqdm.auto: Provides a fast, extensible progress bar for loops and iterations.
-- chromadb: Used for interacting with ChromaDB database.
-- csv: Used for writing data to TSV files.
+Output Files:
+- 'embeddings.tsv': Contains the embeddings data, with each embedding represented as a row of tab-separated values.
+- 'metadata.tsv': Contains metadata for each document, with each row representing a document and its metadata,
+  formatted as tab-separated values.
+
+Requirements:
+- chromadb: A Python library for interacting with Chrome Database.
+- tqdm: Provides a progress bar for the processing.
 
 Usage:
-    Run the script as a standalone Python script. Ensure that the ChromaDB database is accessible and
-    the 'db/' directory exists. The script outputs 'embeddings.tsv' and 'metadata.tsv' in the current directory.
+- Run the script in an environment where 'chromadb' and 'tqdm' libraries are installed.
+- Ensure the database path 'db/' is correctly set up with the required collection and data.
+
+Example:
+    `python script_name.py` (Replace 'script_name.py' with the actual script name)
+
+Note:
+- The script assumes the presence of certain fields ('documents', 'embeddings', 'metadatas') in the database collection.
+- The script will overwrite 'embeddings.tsv' and 'metadata.tsv' if they exist in the current directory.
 """
 
 from tqdm.auto import tqdm

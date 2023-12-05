@@ -44,13 +44,14 @@ from SynthSpider import (
     openai_ef,
     azure_ef,
     chroma_client,
-    collection_name,
 )
 
+collection_name = "sitemap_collection"
 
 async def main(sitemap_url, n, ef):
-    """Main function to fetch, parse the sitemap, and save HTML content to ChromaDB."""
-    # global collection
+    """
+    Main function to fetch, parse the sitemap, and save HTML content to ChromaDB.
+    """
 
     # Select the embedding function based on the user input
     if ef == "openai":

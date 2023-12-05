@@ -115,6 +115,44 @@ python write.py "Imagine you are experienced author and writer in dev tools spac
 
 ### This is START of the SynthSpider.py file:
 ~~~
+"""
+This script integrates various functionalities for web scraping, text processing, and database interaction using
+a combination of libraries including BeautifulSoup, ChromaDB, tiktoken, and OpenAI. It's designed to fetch and
+parse sitemaps, extract HTML content from URLs, process and save this content in a ChromaDB database, handle
+rate limits for API requests, and use OpenAI models to generate text based on prompts.
+
+Features:
+- Fetching and parsing XML sitemaps from URLs asynchronously.
+- Extracting and cleaning text from HTML content of web pages.
+- Saving processed text to ChromaDB, a database for storing and querying large text datasets.
+- Handling rate limits when using APIs like OpenAI and Azure OpenAI.
+- Generating articles using OpenAI's GPT models with specified prompts.
+
+Main Functions:
+- fetch_sitemap(url): Asynchronously fetches and returns the XML content of a sitemap from a given URL.
+- parse_sitemap(sitemap_content, max_urls=None): Parses XML sitemap content and extracts URLs.
+- fetch_and_save_html(url, update_progress, collection): Fetches HTML content from a URL, processes the text,
+  and saves it to ChromaDB.
+- save_to_chromadb(url, html_content, collection): Saves processed HTML content to ChromaDB, handling rate limits.
+- search_in_chromadb(query, n_results, collection): Searches for text in ChromaDB based on a query.
+- write_article(prompt): Generates an article using OpenAI or Azure OpenAI based on a given prompt.
+
+Usage:
+- Configure the environment with the required API keys and endpoints.
+- Run the script to perform tasks such as fetching and parsing sitemaps, scraping web content, and interacting
+  with OpenAI's API for content generation.
+
+Note:
+- Requires installation of external libraries: BeautifulSoup, ChromaDB, tiktoken, OpenAI, dotenv, and argparse.
+- Ensure that the required environment variables are set correctly for API keys and endpoints.
+- This script uses asyncio for asynchronous operations and handles exceptions gracefully.
+
+Example:
+- To fetch and parse a sitemap: `await fetch_sitemap('https://example.com/sitemap.xml')`
+- To generate an article using OpenAI: `write_article('Write an article about the future of AI')`
+"""
+
+
 # pip install openai chromadb python-dotenv bs4 argparse lxml tiktoken
 import logging
 import asyncio
@@ -157,7 +195,7 @@ azure_openai_client = AzureOpenAI(
     api_version=azure_api_version,
     # https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/create-resource?pivots=web-portal#create-a-resource
     azure_endpoint=azure_endpoint,
-    api_key = azure_api_key,
+    api_key=azure_api_key,
 )
 
 # Load the encoding once at the start of your script
@@ -166,21 +204,21 @@ encoding = tiktoken.encoding_for_model("text-embedding-ada-002")
 # Embeddings functions
 default_ef = embedding_functions.DefaultEmbeddingFunction()
 openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-                api_key=openai_api_key,
-                model_name="text-embedding-ada-002"
-            )
+    api_key=openai_api_key, model_name="text-embedding-ada-002"
+)
 azure_ef = embedding_functions.OpenAIEmbeddingFunction(
-                api_key=azure_api_key,
-                api_base=azure_endpoint,
-                api_type="azure",
-                api_version=azure_api_version,
-                model_name="text-embedding-ada-002"
-            )
+    api_key=azure_api_key,
+    api_base=azure_endpoint,
+    api_type="azure",
+    api_version=azure_api_version,
+    model_name="text-embedding-ada-002",
+)
 
 # Initialize ChromaDB Client
 # chroma_client = chromadb.Client() # in-memory db
-chroma_client = chromadb.PersistentClient(path="db") # persistent db
+chroma_client = chromadb.PersistentClient(path="db")  # persistent db
 collection_name = "sitemap_collection"
+
 
 async def fetch_sitemap(url):
     """
@@ -194,6 +232,7 @@ async def fetch_sitemap(url):
     except requests.RequestException as e:
         logging.error(f"Error fetching sitemap: {e}")
         return None
+
 
 def parse_sitemap(sitemap_content, max_urls=None):
     """
@@ -214,16 +253,16 @@ def parse_sitemap(sitemap_content, max_urls=None):
     # Define the namespace map for parsing sitemap XML
     # Adjusted to handle both http and https namespaces
     namespaces = {
-        'http': 'http://www.sitemaps.org/schemas/sitemap/0.9',
-        'https': 'https://www.sitemaps.org/schemas/sitemap/0.9'
+        "http": "http://www.sitemaps.org/schemas/sitemap/0.9",
+        "https": "https://www.sitemaps.org/schemas/sitemap/0.9",
     }
 
     # Try to extract the URLs with http namespace first
-    urls = [element.text for element in root.findall('.//http:loc', namespaces)]
-    
+    urls = [element.text for element in root.findall(".//http:loc", namespaces)]
+
     # If no URLs found, try with https namespace
     if not urls:
-        urls = [element.text for element in root.findall('.//https:loc', namespaces)]
+        urls = [element.text for element in root.findall(".//https:loc", namespaces)]
 
     # Limit the number of URLs if max_urls is specified
     if max_urls is not None:
@@ -231,41 +270,49 @@ def parse_sitemap(sitemap_content, max_urls=None):
 
     return urls
 
+
 async def fetch_and_save_html(url, update_progress, collection):
     """
-    Fetch the HTML content of a given URL, extract and clean text from main content elements, 
+    Fetch the HTML content of a given URL, extract and clean text from main content elements,
     and save it to ChromaDB.
     """
     try:
         response = await asyncio.to_thread(requests.get, url)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'lxml')
-        
+        soup = BeautifulSoup(response.text, "lxml")
+
         # Remove script and style elements
-        for script_or_style in soup(['script', 'style', 'header', 'footer', 'nav']):
+        for script_or_style in soup(["script", "style", "header", "footer", "nav"]):
             script_or_style.extract()
-        
+
         # Extract main content using common content markers
-        main_content = soup.find_all(['article', 'main', 'div'], class_=lambda x: x and 'content' in x)
-        
+        main_content = soup.find_all(
+            ["article", "main", "div"], class_=lambda x: x and "content" in x
+        )
+
         # If no common content markers found, fall back to extracting all text
         if not main_content:
-            main_content = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p'])
-        
-        text_content = ' '.join(element.get_text(strip=True, separator=' ') for element in main_content)
+            main_content = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+
+        text_content = " ".join(
+            element.get_text(strip=True, separator=" ") for element in main_content
+        )
 
         save_to_chromadb(url, text_content, collection)
         update_progress()
     except requests.RequestException as e:
         logging.error(f"Error fetching HTML content from {url}: {e}")
 
+
 # Global variables to keep track of the rate limit
 tokens_per_minute_limit = 240000  # Your rate limit
 tokens_used_this_minute = 0
 minute_window_start = time.time()
 
+
 def count_tokens(text):
     return len(encoding.encode(text))
+
 
 def within_rate_limit(num_tokens):
     global tokens_used_this_minute, minute_window_start
@@ -275,6 +322,7 @@ def within_rate_limit(num_tokens):
         tokens_used_this_minute = 0
         minute_window_start = current_time
     return tokens_used_this_minute + num_tokens <= tokens_per_minute_limit
+
 
 def wait_for_rate_limit_reset():
     global minute_window_start
@@ -286,7 +334,10 @@ def wait_for_rate_limit_reset():
     tokens_used_this_minute = 0
     minute_window_start = time.time()
 
-@backoff.on_exception(backoff.expo, RateLimitError, max_tries=8, max_time=300)  # Increase max_time if needed
+
+@backoff.on_exception(
+    backoff.expo, RateLimitError, max_tries=8, max_time=300
+)  # Increase max_time if needed
 def save_to_chromadb(url, html_content, collection):
     global tokens_used_this_minute
     num_tokens = count_tokens(html_content)
@@ -295,24 +346,25 @@ def save_to_chromadb(url, html_content, collection):
         wait_for_rate_limit_reset()
 
     try:
-        collection.upsert(
-            documents=[html_content],
-            metadatas=[{"url": url}],
-            ids=[url]
-        )
+        collection.upsert(documents=[html_content], metadatas=[{"url": url}], ids=[url])
         tokens_used_this_minute += num_tokens
     except UniqueConstraintError as e:
         logging.warning(f"Duplicate entry for {url} not added to ChromaDB: {e}")
     except RateLimitError as e:
-        logging.error(f"Rate limit exceeded when adding/updating {url} in ChromaDB: {e}")
+        logging.error(
+            f"Rate limit exceeded when adding/updating {url} in ChromaDB: {e}"
+        )
         # Wait for the full duration of the rate limit reset window
         logging.info("Waiting for the rate limit to reset before retrying...")
         wait_for_rate_limit_reset()
         raise  # Re-raise the exception to trigger the backoff
     except Exception as e:
-        logging.error(f"Exception while adding/updating {url} in ChromaDB: {type(e).__name__}, {e}")
+        logging.error(
+            f"Exception while adding/updating {url} in ChromaDB: {type(e).__name__}, {e}"
+        )
         snippet = html_content[:200]
         logging.info(f"Content snippet: {snippet}")
+
 
 def search_in_chromadb(query, n_results, collection):
     """
@@ -327,12 +379,10 @@ def search_in_chromadb(query, n_results, collection):
     """
 
     # Search in the collection
-    search_results = collection.query(
-        query_texts=[query],
-        n_results=n_results
-    )
+    search_results = collection.query(query_texts=[query], n_results=n_results)
 
     return search_results
+
 
 def write_article(prompt):
     """
@@ -342,9 +392,12 @@ def write_article(prompt):
         response = azure_openai_client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": "Follow user instructions. Write using Markdown."},
-                {"role": "user", "content": prompt}
-            ]
+                {
+                    "role": "system",
+                    "content": "Follow user instructions. Write using Markdown.",
+                },
+                {"role": "user", "content": prompt},
+            ],
         )
         # Access the 'content' attribute of the last message in the response
         last_message_content = response.choices[0].message.content
@@ -353,21 +406,75 @@ def write_article(prompt):
     except Exception as e:
         print(f"An error occurred during article generation: {e}")
         return None
+
 ~~~
 ### This is END of the file SynthSpider.py!
 
 ### This is START of the write.py file:
 ~~~
-from SynthSpider import search_in_chromadb, write_article, default_ef, openai_ef, azure_ef, chroma_client, collection_name
+"""
+SynthSpider: Article Generation Using OpenAI and ChromaDB
+
+This script, part of the SynthSpider package, leverages the power of OpenAI's language models
+and ChromaDB's database search capabilities to generate articles based on a user-provided prompt.
+It uses an embedding function to enhance search results from ChromaDB, which are then combined
+with the initial prompt to create a comprehensive article.
+
+Functions:
+    argparse.ArgumentParser: Parses command line arguments.
+    search_in_chromadb: Searches in ChromaDB using the given search term and number of results.
+    write_article: Generates an article based on the combined prompt and search results.
+    openai_ef, azure_ef, default_ef: Different embedding functions used for processing search results.
+
+Command Line Arguments:
+    prompt (str): The initial prompt for the article.
+    --s (str): The search term to be used for querying ChromaDB. This argument is required.
+    --n (int, default=5): The number of search results to retrieve from ChromaDB.
+    --ef (str, choices=["default", "openai", "azure"], default="default"): The embedding function
+    to be used for processing ChromaDB search results.
+
+Workflow:
+    1. Parse command line arguments.
+    2. Select the appropriate embedding function.
+    3. Initialize a collection in ChromaDB with the selected embedding function.
+    4. Perform a search in ChromaDB using the provided search term and number of results.
+    5. Append the search results to the initial prompt to create a combined context.
+    6. Generate and print the article based on the combined prompt.
+
+Example Usage:
+    python synthspider.py "Your article prompt here" --s "Search Term" --n 10 --ef "openai"
+"""
+
 import argparse
+from SynthSpider import (
+    search_in_chromadb,
+    write_article,
+    default_ef,
+    openai_ef,
+    azure_ef,
+    chroma_client,
+    collection_name,
+)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate an article using OpenAI and ChromaDB.')
-    parser.add_argument('prompt', type=str, help='Article prompt.')
-    parser.add_argument('--s', type=str, required=True, help='Search term for ChromaDB.')
-    parser.add_argument('--n', type=int, default=5, help='Number of ChromaDB search results.')
-    parser.add_argument('--ef', type=str, default='default', choices=['default', 'openai', 'azure'], help='Embedding function to use (default or openai).')
-    
+    parser = argparse.ArgumentParser(
+        description="Generate an article using OpenAI and ChromaDB."
+    )
+    parser.add_argument("prompt", type=str, help="Article prompt.")
+    parser.add_argument(
+        "--s", type=str, required=True, help="Search term for ChromaDB."
+    )
+    parser.add_argument(
+        "--n", type=int, default=5, help="Number of ChromaDB search results."
+    )
+    parser.add_argument(
+        "--ef",
+        type=str,
+        default="default",
+        choices=["default", "openai", "azure"],
+        help="Embedding function to use (default or openai).",
+    )
+
     args = parser.parse_args()
 
     # Select the embedding function based on the user input
@@ -380,8 +487,7 @@ if __name__ == "__main__":
 
     # Initialize the collection with the selected embedding function
     collection = chroma_client.get_or_create_collection(
-        name=collection_name,
-        embedding_function=embedding_function
+        name=collection_name, embedding_function=embedding_function
     )
 
     # Search in ChromaDB
@@ -389,8 +495,12 @@ if __name__ == "__main__":
 
     # Process and append search results to the prompt
     additional_context = ""
-    for i in range(len(search_results['documents'])):  # Iterate over each set of documents (outer list)
-        for j in range(len(search_results['documents'][i])):  # Iterate over documents in each set (inner list)
+    for i in range(
+        len(search_results["documents"])
+    ):  # Iterate over each set of documents (outer list)
+        for j in range(
+            len(search_results["documents"][i])
+        ):  # Iterate over documents in each set (inner list)
             additional_context += f"{search_results['documents'][i][j]}\n\n"
 
     combined_prompt = args.prompt + "\n\n" + additional_context
@@ -404,10 +514,40 @@ if __name__ == "__main__":
 
 ### This is START of the embeddings.py file:
 ~~~
-import os
-import json
-import ipdb
-import replicate
+"""
+This script is designed for extracting and saving data from a database using the chromadb library. It retrieves
+documents, embeddings, and metadata from a specified collection within a PersistentClient database, and then
+writes this data to two separate files: 'embeddings.tsv' and 'metadata.tsv'.
+
+Key Steps:
+1. Initializes a PersistentClient from chromadb, pointing to a database located at 'db/'.
+2. Retrieves or creates a collection named 'sitemap_collection'.
+3. Fetches documents, embeddings, and metadata from the collection.
+4. Processes and combines the fetched data into a structured format.
+5. Writes the embeddings data to 'embeddings.tsv'.
+6. Writes the combined metadata to 'metadata.tsv'.
+
+Output Files:
+- 'embeddings.tsv': Contains the embeddings data, with each embedding represented as a row of tab-separated values.
+- 'metadata.tsv': Contains metadata for each document, with each row representing a document and its metadata,
+  formatted as tab-separated values.
+
+Requirements:
+- chromadb: A Python library for interacting with Chrome Database.
+- tqdm: Provides a progress bar for the processing.
+
+Usage:
+- Run the script in an environment where 'chromadb' and 'tqdm' libraries are installed.
+- Ensure the database path 'db/' is correctly set up with the required collection and data.
+
+Example:
+    `python script_name.py` (Replace 'script_name.py' with the actual script name)
+
+Note:
+- The script assumes the presence of certain fields ('documents', 'embeddings', 'metadatas') in the database collection.
+- The script will overwrite 'embeddings.tsv' and 'metadata.tsv' if they exist in the current directory.
+"""
+
 from tqdm.auto import tqdm
 import chromadb
 import csv
@@ -437,19 +577,59 @@ with open("./metadata.tsv", "w", newline="", encoding="utf-8") as f:
     writer.writeheader()
     for data in metadatas:
         writer.writerow(data)
+
 ~~~
 ### This is END of the file embeddings.py!
 
 ### This is START of the search.py file:
 ~~~
-from SynthSpider import search_in_chromadb, default_ef, openai_ef, azure_ef, chroma_client, collection_name
+"""
+ChromaDB Searcher: Search and Retrieve Documents from ChromaDB
+
+This script, a part of the SynthSpider package, is designed to facilitate searching in ChromaDB using a user-defined query. It allows users to specify the number of results to return and the embedding function to use for the search, enhancing the relevance and accuracy of the results.
+
+Functions:
+    argparse.ArgumentParser: Parses command line arguments.
+    search_in_chromadb: Performs a search in ChromaDB based on the given query, number of results, and collection.
+    openai_ef, azure_ef, default_ef: Different embedding functions available for ChromaDB search.
+
+Command Line Arguments:
+    query (str): The search query for ChromaDB.
+    --n (int, default=5): The number of results to return from the search.
+    --ef (str, choices=["default", "openai", "azure"], default="default"): The embedding function to use for the search.
+
+Workflow:
+    1. Parse command line arguments for the search query, number of results, and embedding function.
+    2. Select the appropriate embedding function based on user input.
+    3. Initialize a collection in ChromaDB with the selected embedding function.
+    4. Perform a search in ChromaDB using the provided query and collection.
+    5. Print the URLs and content of each retrieved document.
+
+Example Usage:
+    python chromadb_searcher.py "Your search query" --n 10 --ef "openai"
+"""
+
 import argparse
+from SynthSpider import (
+    search_in_chromadb,
+    default_ef,
+    openai_ef,
+    azure_ef,
+    chroma_client,
+    collection_name,
+)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Search in ChromaDB.')
-    parser.add_argument('query', type=str, help='Search query.')
-    parser.add_argument('--n', type=int, default=5, help='Number of results to return.')
-    parser.add_argument('--ef', type=str, default='default', choices=['default', 'openai', 'azure'], help='Embedding function to use (default or openai).')
+    parser = argparse.ArgumentParser(description="Search in ChromaDB.")
+    parser.add_argument("query", type=str, help="Search query.")
+    parser.add_argument("--n", type=int, default=5, help="Number of results to return.")
+    parser.add_argument(
+        "--ef",
+        type=str,
+        default="default",
+        choices=["default", "openai", "azure"],
+        help="Embedding function to use (default or openai).",
+    )
     args = parser.parse_args()
 
     # Select the embedding function based on the user input
@@ -462,35 +642,84 @@ if __name__ == "__main__":
 
     # Initialize the collection with the selected embedding function
     collection = chroma_client.get_or_create_collection(
-        name=collection_name,
-        embedding_function=embedding_function
+        name=collection_name, embedding_function=embedding_function
     )
 
     # Perform the search
     results = search_in_chromadb(args.query, args.n, collection)
 
 # Print the results
-for i in range(len(results['documents'])):  # Iterate over each set of documents (outer list)
-    for j in range(len(results['documents'][i])):  # Iterate over documents in each set (inner list)
+for i in range(
+    len(results["documents"])
+):  # Iterate over each set of documents (outer list)
+    for j in range(
+        len(results["documents"][i])
+    ):  # Iterate over documents in each set (inner list)
         print(f"URL: {results['metadatas'][i][j]['url']}")
         print(f"Content: {results['documents'][i][j]}")  # Print the document
         print("-" * 50)
+
 ~~~
 ### This is END of the file search.py!
 
 ### This is START of the populate.py file:
 ~~~
-from SynthSpider import fetch_sitemap, parse_sitemap, fetch_and_save_html, default_ef, openai_ef, azure_ef, chroma_client, collection_name
+"""
+Sitemap Content Fetcher: Asynchronous Sitemap Processing and HTML Content Saving in Vector DB
+
+This script, as part of the SynthSpider package, is designed for asynchronous fetching and
+processing of website sitemaps. It retrieves sitemap data, parses it to extract URLs, fetches
+HTML content of these URLs, and saves them to ChromaDB using a selected embedding function
+for enhanced search and retrieval capabilities.
+
+Functions:
+    asyncio.run(): Executes the main asynchronous function.
+    fetch_sitemap: Fetches the sitemap from the provided URL.
+    parse_sitemap: Parses the sitemap XML to extract URLs.
+    fetch_and_save_html: Fetches and saves the HTML content of each URL to ChromaDB.
+    openai_ef, azure_ef, default_ef: Different embedding functions for ChromaDB content processing.
+
+Command Line Arguments:
+    sitemap_url (str): The full URL of the sitemap.xml file to be processed.
+    --n (int, optional): The number of URLs to fetch from the sitemap. If not specified,
+    all URLs are fetched.
+    --ef (str, choices=["default", "openai", "azure"], default="default"): The embedding
+    function to be used for content saving in ChromaDB.
+
+Workflow:
+    1. Parse command line arguments.
+    2. Select the appropriate embedding function based on user input.
+    3. Fetch the sitemap XML from the specified URL.
+    4. Parse the sitemap to extract URLs.
+    5. Asynchronously fetch and save the HTML content of each URL to ChromaDB.
+    6. Update the progress bar for each completed task.
+
+Example Usage:
+    python sitemap_content_fetcher.py "http://example.com/sitemap.xml" --n 100 --ef "openai"
+"""
+
 import argparse
 import asyncio
 import logging
 from tqdm import tqdm
+from SynthSpider import (
+    fetch_sitemap,
+    parse_sitemap,
+    fetch_and_save_html,
+    default_ef,
+    openai_ef,
+    azure_ef,
+    chroma_client,
+    collection_name,
+)
+
 
 async def main(sitemap_url, n, ef):
-    global collection
     """
     Main function to fetch, parse the sitemap, and save HTML content to ChromaDB.
     """
+    # global collection
+
     # Select the embedding function based on the user input
     if ef == "openai":
         embedding_function = openai_ef
@@ -501,8 +730,7 @@ async def main(sitemap_url, n, ef):
 
     # Get or create the collection with the selected embedding function
     collection = chroma_client.get_or_create_collection(
-        name=collection_name,
-        embedding_function=embedding_function
+        name=collection_name, embedding_function=embedding_function
     )
 
     # Fetch the sitemap
@@ -529,17 +757,27 @@ async def main(sitemap_url, n, ef):
     # Fetch and save HTML content of each URL
     tasks = [fetch_and_save_html(url, update_progress, collection) for url in urls]
     await asyncio.gather(*tasks)
-    
+
     pbar.close()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Fetch Sitemap Content.')
-    parser.add_argument('sitemap_url', type=str, help='Full URL of sitemap.xml file.')
-    parser.add_argument('--n', type=int, default=None, help='Number of results to return.')
-    parser.add_argument('--ef', type=str, default='default', choices=['default', 'openai', 'azure'], help='Embedding function to use (default or openai).')
+    parser = argparse.ArgumentParser(description="Fetch Sitemap Content.")
+    parser.add_argument("sitemap_url", type=str, help="Full URL of sitemap.xml file.")
+    parser.add_argument(
+        "--n", type=int, default=None, help="Number of results to return."
+    )
+    parser.add_argument(
+        "--ef",
+        type=str,
+        default="default",
+        choices=["default", "openai", "azure"],
+        help="Embedding function to use (default or openai).",
+    )
     args = parser.parse_args()
 
     asyncio.run(main(args.sitemap_url, args.n, args.ef))
+
 ~~~
 ### This is END of the file populate.py!
 
