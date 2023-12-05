@@ -1,9 +1,36 @@
+"""
+This script provides functionality to concatenate Python files located in a specified directory into a single output file.
+It also includes logging for debug and error information. The script will process a 'README.md' file if present in the
+directory, appending its contents first. Then, it iterates over all Python files (excluding itself if named 'concat.py')
+and appends their contents to the output file. Each file's contents are framed with start and end comments for clarity.
+
+Functions:
+    concatenate_py_files(directory, output_file):
+        Concatenates the content of all Python files in the given directory, along with 'README.md' (if present),
+        into a specified output file.
+
+Usage:
+    To execute the script, run it as a standalone Python script. It will automatically concatenate Python files
+    in the same directory as the script itself, outputting to 'output.txt' in the same directory.
+
+Example:
+    `python concat.py` will concatenate Python files in the script's directory into 'output.txt'.
+
+Note:
+    - The script filters out 'concat.py' to avoid self-inclusion.
+    - Logging is set to DEBUG level by default and can be adjusted as needed.
+    - Errors during file processing are logged, and the script halts on encountering an exception.
+"""
+
 import os
 import logging
 
+
 def concatenate_py_files(directory, output_file):
     # Set up logging
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
 
     # Check if the directory exists
     if not os.path.exists(directory):
@@ -13,20 +40,22 @@ def concatenate_py_files(directory, output_file):
         logging.info(f"Accessing directory: {directory}")
 
     try:
-        with open(output_file, 'w') as outfile:
+        with open(output_file, "w") as outfile:
             # First process README.md if it exists
-            readme_file = 'README.md'
+            readme_file = "README.md"
             readme_path = os.path.join(directory, readme_file)
             if os.path.exists(readme_path):
                 logging.info(f"Processing file: {readme_file}")
                 outfile.write(f"### This is START of the {readme_file} file:\n~~~\n")
-                with open(readme_path, 'r') as infile:
+                with open(readme_path, "r") as infile:
                     outfile.write(infile.read())
                 outfile.write(f"\n~~~\n### This is END of the file {readme_file}!\n\n")
 
             # Iterate over all files in the directory
             for filename in os.listdir(directory):
-                if filename.endswith(('.py')) and filename != 'concat.py':  # Exclude concat.py itself
+                if (
+                    filename.endswith((".py")) and filename != "concat.py"
+                ):  # Exclude concat.py itself
                     logging.info(f"Processing file: {filename}")
 
                     # Write the start comment
@@ -36,21 +65,24 @@ def concatenate_py_files(directory, output_file):
                     filepath = os.path.join(directory, filename)
 
                     # Read and write the content of the .py file
-                    with open(filepath, 'r') as infile:
+                    with open(filepath, "r") as infile:
                         outfile.write(infile.read())
 
                     # Write the end comment
                     outfile.write(f"\n~~~\n### This is END of the file {filename}!\n\n")
-            logging.info(f"All files have been processed. Output written to {output_file}")
+            logging.info(
+                f"All files have been processed. Output written to {output_file}"
+            )
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
+
 if __name__ == "__main__":
     # Directory path where concat.py is located
     directory_path = os.path.dirname(os.path.realpath(__file__))
-    
+
     # Output file path in the same directory
-    output_file_path = os.path.join(directory_path, 'output.txt')
+    output_file_path = os.path.join(directory_path, "output.txt")
 
     concatenate_py_files(directory_path, output_file_path)

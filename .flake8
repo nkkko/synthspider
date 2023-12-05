@@ -1,0 +1,3 @@
+[flake8]
+max-line-length = 88  # Or any number you prefer; set it to a very high value to effectively ignore the rule.
+ignore = E501  # This tells Flake8 to ignore the line length error.
