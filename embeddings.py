@@ -42,11 +42,11 @@ client = chromadb.PersistentClient(path="db/")
 collection = client.get_or_create_collection(name=f"sitemap_collection")
 
 
-results = collection.get(include=["documents", "embeddings", "metadatas"])
+results = collection.get(include=["embeddings", "metadatas"])
 
 metadatas = [
-    {"id": id, "document": doc, **meta}
-    for id, doc, meta in zip(results["ids"], results["documents"], results["metadatas"])
+    {"id": id, **meta}
+    for id, meta in zip(results["ids"], results["metadatas"])
 ]
 
 with open("./embeddings.tsv", "w", encoding="utf-8") as f:
